@@ -29,7 +29,7 @@ def parse_s3_backup(backup):
     site, filename = key.split('/')
     if not filename:
         return
-    # import pdb;pdb.set_trace()
+
     return {
         'site': site.title(),
         'filename': filename,
@@ -48,7 +48,7 @@ def get_date(filename):
 
 
 def get_timestamp(filename):
-    # Look for '_1522926954.' from 'postgres_photos_1522926954.sql.gz'
+    # Look for '_1522926954.' from 'postgres_dump_1522926954.sql.gz'
     date_pattern = re.compile(r'_\d+\.')
     match = date_pattern.search(filename)
     if match:
@@ -65,7 +65,7 @@ def format_size(num):
 
 def take_backups():
     """
-    Takes database snapshots every 3 days
+    Takes database snapshots for each database
     """
     print('Creating database backups')
     for db_name in settings.DATABASES:

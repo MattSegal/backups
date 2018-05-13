@@ -14,5 +14,8 @@ Expect a file called settings.py which contains:
             PGPASSWORD
             PGDATABASE
         }
-    }]
+    }
 
+## to do
+
+- automatically prune dumps older than X days
