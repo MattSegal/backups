@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Database Backups</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css" integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4" crossorigin="anonymous">
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}"/>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="row">
+        <div class="col">
+          <h1>Database Backups</h1>
+        </div>
+      </div>
+    </div>
+  </header>
+  <main>
+    <div class="container">
+      <div class="row header">
+        <div class="col-3">Site</div>
+        <div class="col-3">Date</div>
+        <div class="col-4">File</div>
+        <div class="col-2">Size</div>
+      </div>
+      {% for backup in backups %}
+        <div class="row backup">
+          <div class="col-3">{{ backup.site }}</div>
+          <div class="col-3">{{ backup.date }}</div>
+          <div class="col-4">{{ backup.filename }}</div>
+          <div class="col-2">{{ backup.size }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </main>
+</body>
+</html>
