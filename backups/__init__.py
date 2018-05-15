@@ -4,19 +4,18 @@ import subprocess
 from datetime import datetime
 
 import flask
-import boto3
-from zappa.async import task
+from zappa.async import task, run
 
-import settings
+from .settings import SECRET_KEY, DATABASES
+from .store import list_s3_files, upload_fileobj_to_s3
 
 app = flask.Flask(__name__)
-app.secret_key = settings.SECRET_KEY
-bucket = boto3.resource('s3').Bucket(settings.BACKUP_S3_BUCKET)
+app.secret_key = SECRET_KEY
 
 
 @app.route('/', methods=['GET'])
 def home_page():
-    backups = (parse_s3_backup(b) for b in bucket.objects.all())
+    backups = (parse_s3_backup(b) for b in list_s3_files())
     backups = [b for b in backups if b]
     backups = sorted(backups, key=lambda b: -b['timestamp'])
     return flask.render_template('index.html', **{
@@ -25,7 +24,7 @@ def home_page():
 
 
 def parse_s3_backup(backup):
-    key = backup.key
+    key = backup['Key']
     site, filename = key.split('/')
     if not filename:
         return
@@ -33,7 +32,7 @@ def parse_s3_backup(backup):
     return {
         'site': site.title(),
         'filename': filename,
-        'size': format_size(backup.size),
+        'size': format_size(backup['Size']),
         'date': get_date(filename),
         'timestamp': get_timestamp(filename)
     }
@@ -68,21 +67,46 @@ def take_backups():
     Takes database snapshots for each database
     """
     print('Creating database backups')
-    for db_name in settings.DATABASES:
-        run(take_backup, db_name)
+    for db_name in DATABASES:
+        run(take_backup, args=[], kwargs={'db_name': db_name})
 
     print('Done disptaching database backup jobs')
 
 
+@app.route('/backups/', methods=['GET'])
+def take_backups():
+    """
+    Takes database snapshots for each database
+    """
+    print('Creating database backups')
+    for db_name in DATABASES:
+        take_backup(*[], **{'db_name': db_name})
+
+    print('Done disptaching database backup jobs')
+    return 'Done!'
+
+
 @task
-def take_backup(db_name):
+def take_backup(*args, **kwargs):
     """
     Take a particular database backup
     """
+    db_name = kwargs.get('db_name')
+    if not db_name:
+        print('No database name provided for creating backup')
+        return
+
     print('[{}] Creating backup'.format(db_name))
-    db = settings.DATABASES[db_name]
     backup_file = '/tmp/{}.sql'.format(db_name)
-    process = subprocess.Popen(['pg_dump', '--format=custom', '--file={}'.format(backup_file)], env=db)
+    dir_path = os.path.dirname(os.path.abspath(__file__))
+    pg_dump_path = os.path.join(dir_path, 'bin', 'pg_dump')
+    env = {
+        **DATABASES[db_name],
+    }
+    process = subprocess.Popen(
+        ['pg_dump', '--format=custom', '--file={}'.format(backup_file)],
+        env=env
+    )
     print('[{}] Waiting for pg_dump'.format(db_name))
     process.wait()
     print('[{}] Done creating backup'.format(db_name))
@@ -104,7 +128,7 @@ def take_backup(db_name):
 
     with open(backup_file, 'rb') as f:
         print('[{}] Uploading {} to S3 key {}'.format(db_name, backup_file, key))
-        bucket.upload_fileobj(f, key)
+        upload_fileobj_to_s3(f, key)
 
     print('[{}] Finished uploading {} to S3 key {}'.format(db_name, backup_file, key))
     print('[{}] Done creating backup'.format(db_name))

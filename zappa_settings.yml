@@ -1,11 +1,11 @@
 ---
 prod:
-    app_function: src.app.app
+    app_function: backups.app
     s3_bucket: zappa-db-backups
     aws_region: ap-southeast-2
     profile_name: personal
     project_name: db-backups
     runtime: python3.6
     events:
-      - function: src.app.take_backups
+      - function: backups.take_backups
         expression: rate(3 days)
